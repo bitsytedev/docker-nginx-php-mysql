@@ -1,0 +1,72 @@
+#https://github.com/nanoninja/docker-nginx-php-mysql
+version: '3'
+services:
+    web:
+        image: nginx:latest
+        volumes:
+            - "./etc/nginx/default.conf:/etc/nginx/conf.d/default.conf"
+            - "./web:/var/www/html"
+            - "./etc/nginx/default.template.conf:/etc/nginx/conf.d/default.template"
+        ports:
+            - "8000:80"            
+        environment:
+            - NGINX_HOST=${NGINX_HOST}
+        command: /bin/sh -c "envsubst '$$NGINX_HOST' < /etc/nginx/conf.d/default.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+        restart: always
+        depends_on:
+            - php
+            - mysqldb
+    php:
+        image: nanoninja/php-fpm:${PHP_VERSION}
+        restart: always
+        volumes:
+            - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+            - "./web:/var/www/html"
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: phpmyadmin
+        ports:
+            - "8080:80"
+        environment:
+            - PMA_ARBITRARY=1
+            - PMA_HOST=${MYSQL_HOST}
+        restart: always
+        depends_on:
+            - mysqldb
+    mysqldb:
+        image: mariadb:${MYSQL_VERSION}
+        container_name: ${MYSQL_HOST}
+        restart: always
+        env_file:
+            - ".env"
+        environment:
+            - MYSQL_DATABASE=${MYSQL_DATABASE}
+            - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+            - MYSQL_USER=${MYSQL_USER}
+            - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+        ports:
+            - "8989:3306"
+        volumes:
+            - "./data/db/mysql:/var/lib/mysql"
+
+#env file
+    # #!/usr/bin/env bash
+
+    # # See https://docs.docker.com/compose/environment-variables/#the-env-file
+
+    # # Nginx
+    # NGINX_HOST=0.0.0.0
+
+    # # PHP
+
+    # # See https://hub.docker.com/r/nanoninja/php-fpm/tags/
+    # PHP_VERSION=5.6
+
+    # # MySQL
+    # MYSQL_VERSION=10.1.21
+    # MYSQL_HOST=mysql
+    # MYSQL_DATABASE=test
+    # MYSQL_ROOT_USER=root
+    # MYSQL_ROOT_PASSWORD=test
+    # MYSQL_USER=admin
+    # MYSQL_PASSWORD=test
